@@ -1,0 +1,47 @@
+name: Preprocessing Pipeline - Breast Cancer
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'preprocessing/automate_Bily.py'
+  workflow_dispatch:
+
+jobs:
+  preprocessing:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.7'
+
+      - name: Install dependencies
+        run: pip install pandas numpy scikit-learn
+
+      - name: Run preprocessing
+        run: |
+          cd preprocessing
+          python automate_Bily.py
+
+      - name: Upload preprocessed dataset
+        uses: actions/upload-artifact@v4
+        with:
+          name: breast-cancer-preprocessed-${{ github.run_number }}
+          path: |
+            breast_cancer_preprocessing/
+            breast_cancer_raw/
+          retention-days: 30
+
+      - name: Commit & push preprocessed dataset
+        run: |
+          git config --global user.name  "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add breast_cancer_preprocessing/ breast_cancer_raw/ || true
+          git diff --staged --quiet || git commit -m "chore: update preprocessed dataset [run #${{ github.run_number }}]"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
